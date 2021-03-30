@@ -1,0 +1,90 @@
+---
+title: \vspace{-1.5cm} \textbf{STA610 Lab 6 Team 4 Report}
+author:
+- Cole Juracek 
+- Lauren Palazzo 
+- Lingyu Zhou 
+- Fan Zhu
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+fontsize: 11pt
+geometry: margin=2cm
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache=TRUE, fig.height = 3)
+```
+
+```{r}
+df <- read.delim("BadgersFarmSurveysNoNA.txt", header = TRUE)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(pacman)
+pacman::p_load(tidyverse, lme4, gridExtra, grid, ggplot2, lattice, redres, stringr, influence.ME, knitr)
+# devtools::install_github("goodekat/redres")
+```
+
+## EDA
+#### Response Variable: Signs_in_yard
+```{r}
+knitr::kable(table(df$Signs_in_yard), 
+             col.names = c("Signs in Yard","Freq"), 
+             caption = "Frequency Table for Signs in Yard")
+```
+
+
+```{r}
+table(df$Year)
+```
+
+```{r}
+table(df$Season)
+```
+
+
+```{r}
+hist(df$No_active_setts_in_fields)
+```
+
+```{r}
+hist(df$No_cattle_in_buidlings_yard)
+```
+
+```{r}
+table(df$Accessible_feed_store_present)
+```
+
+
+
+
+```{r, fig.height=3, fig.align='center'}
+# log transform ppm
+df$log_ppm <- log(df$ppm)
+hist_ppm <- ggplot(df, aes(x=ppm)) + 
+ geom_histogram(aes(y=..density..), colour="black", fill="white", bins = 50)+
+ geom_density(alpha=.2, fill="red") 
+hist_log_ppm <- ggplot(df, aes(x=log_ppm)) + 
+ geom_histogram(aes(y=..density..), colour="black", fill="white", bins = 50)+
+ geom_density(alpha=.2, fill="blue") 
+grid.arrange(hist_ppm, hist_log_ppm, ncol=2)
+```
+
+
+## Model
+
+Predictors to consider include year, season, number of active badger homes in nearby fields (no_active_setts_in_fields), the number of cattle on the farm (no_cattle_in_buildings_yard), whether farm feed can be accessed by badgers (accessible_feed_store_present), and indicators of whether various types of crops were present on the farm (including grass silage, cereal silage, hay, cereal for grain, sugar beets, vegetables, and molasses).
+
+```{r}
+mdl1 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + Accessible_feed_store_present + (1|Season) + Grass_silage + Cereal_silage + HayStraw + Cereal_grains + Sugarbeet + Vegetables + Molasses, 
+              family = binomial(link="logit"),
+              data = df)
+summary(mdl1)
+
+```
+
+
+#### Model Specification
+
+## Result
