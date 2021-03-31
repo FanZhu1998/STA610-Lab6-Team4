@@ -22,11 +22,12 @@ df <- read.delim("BadgersFarmSurveysNoNA.txt", header = TRUE)
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 library(pacman)
-pacman::p_load(tidyverse, lme4, gridExtra, grid, ggplot2, lattice, redres, stringr, influence.ME, knitr, GGally, corrplot)
+pacman::p_load(tidyverse, lme4, gridExtra, grid, ggplot2, lattice, redres, stringr, influence.ME, knitr, GGally, corrplot, correlation)
 # devtools::install_github("goodekat/redres")
 ```
 
 ## EDA
+
 #### Response Variable: Signs_in_yard
 ```{r}
 df$Signs_in_yard = factor(df$Signs_in_yard)
@@ -140,18 +141,65 @@ corrplot(cor(df[,c(13,14,15,16,19,20,21)]),
          tl.cex = 0.5)
 ```
 
-
 ```{r, include=FALSE}
 correlation::correlation(df[,c(10,13,14,15,16,19,20,21)])
 ```
-
 
 ```{r, include=FALSE}
 table(df$Accessible_feed_store_present)
 ```
 
+## Cole EDA (remaining variables)
 
+```{r}
+# For visualization, it helps to make these variables factors
+df[, 11:21] <- apply(df[, 11:21], 2, factor)
+```
 
+First, we want to check the relative proportion of badger activity for each binary variable:
+
+```{r fig.height=5}
+plot_binary_data <- function(data, col) {
+    var_df <- data %>% group_by_at(col) %>% summarise(prop = sum(Signs_in_yard == 1) / n())
+    ggplot(var_df, aes_string(x=col, y='prop', fill=col)) + geom_col() + ylim(0, 1) + theme(legend.position = "none")
+}
+
+binary_plots <- lapply(names(df)[11:21], plot_binary_data, data=df)
+grid.arrange(grobs=binary_plots, ncol = 4)
+```
+
+Nearly all of the proportions look like they *could* be similar - especially due to the small sample size. We can formally test whether the proportions are different with a Chi-square test:
+
+```{r}
+test_proportion <- function(col) {
+    results <- chisq.test(table(df$Signs_in_yard, df[, col]))
+    return(results$p.value)
+}
+
+good_ss_names <- c(11:17, 21)
+results <- sapply(names(df)[good_ss_names], test_proportion)
+kable(data.frame('p-val' = results), digits = 3)
+```
+
+At a significance level of $\alpha = 0.05$, we reject the null hypotheses for the following
+
+- HayStraw
+- Concentrates
+- Molasses
+
+And conclude their proportions are not equal.
+
+For the remaining variables, the assumptions of a Chi-sq test were violated (Proteinblocks, Sugarbeet, and Vegetables). At least one of the table values has an expected counts < 5. We can test these with a Fisher exact test for small sample sizes:
+
+```{r}
+results <- sapply(c('Proteinblocks', 'Sugarbeet', 'Vegetables'), function(col) {
+    results <- fisher.test(table(df$Signs_in_yard, df[, col]))
+    return(results$p.value)
+})
+kable(data.frame('p-val' = results), digits = 3)
+```
+
+The results of the Fisher test suggest we should not reject the null at the standard significance level. We do not conclude a meaningful association between these variables and the response.
 
 ## Model
 ```{r}
