@@ -122,8 +122,7 @@ bar_Accessible_feed_store_present <- ggplot(df,
        aes(x = Accessible_feed_store_present, 
            fill = Signs_in_yard)) + 
   geom_bar(position = "fill") +
-  labs(y = "Proportion",
-       title = "Accessible_feed_store_present")
+  labs(y = "Proportion")
 
 grid.arrange(bar_farm, bar_Accessible_feed_store_present, 
              ncol=2,
@@ -143,7 +142,7 @@ corrplot(cor(df[,c(13,14,15,16,19,20,21)]),
 ```
 
 
-```{r}
+```{r, include=FALSE}
 correlation::correlation(df[,c(10,13,14,15,16,19,20,21)])
 ```
 
