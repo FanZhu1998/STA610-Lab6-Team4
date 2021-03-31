@@ -199,3 +199,29 @@ mdl_final <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buid
 #### Model Specification
 
 ## Result
+#### Fixed Effects
+```{r, message=FALSE, warning=FALSE}
+coefs <- data.frame(coef(summary(mdl_final)))
+# use normal distribution to approximate p-value
+coefs$Pr...z.. <- 2 * (1 - pnorm(abs(coefs$z.value)))
+knitr::kable(coefs, col.names = c("Estimate", "Std.Error", "t-value", "P-value"))
+```
+
+#### Random Effects
+```{r}
+re_dat = as.data.frame(VarCorr(mdl_final))
+re_names = rbind("Farm (Intercept)")
+re_results <- cbind(re_names, re_dat$vcov, re_dat$sdcor)
+knitr::kable(re_results, col.names = c("Group", "Variance", "Std.Dev."), digits = 4)
+```
+
+```{r, fig.align='center', fig.height=6}
+dotplot(ranef(mdl_final, condVar=TRUE))$farm_code_numeric
+```
+
+```{r, include=FALSE}
+library(sjstats)
+icc(mdl_final)
+#Adjusted ICC: 0.601
+#Conditional ICC: 0.484
+```
