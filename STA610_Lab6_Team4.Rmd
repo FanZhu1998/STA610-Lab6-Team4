@@ -22,54 +22,136 @@ df <- read.delim("BadgersFarmSurveysNoNA.txt", header = TRUE)
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 library(pacman)
-pacman::p_load(tidyverse, lme4, gridExtra, grid, ggplot2, lattice, redres, stringr, influence.ME, knitr)
+pacman::p_load(tidyverse, lme4, gridExtra, grid, ggplot2, lattice, redres, stringr, influence.ME, knitr, GGally, corrplot)
 # devtools::install_github("goodekat/redres")
 ```
 
 ## EDA
 #### Response Variable: Signs_in_yard
 ```{r}
+df$Signs_in_yard = factor(df$Signs_in_yard)
 knitr::kable(table(df$Signs_in_yard), 
              col.names = c("Signs in Yard","Freq"), 
              caption = "Frequency Table for Signs in Yard")
 ```
 
+#### Year & Season
+```{r, fig.height=2, fig.align='center', include=FALSE}
+df$Year = factor(df$Year)
+df$Season = factor(df$Season)
 
-```{r}
-table(df$Year)
+bar_year <- ggplot(df, 
+       aes(x = Year, 
+           group = Signs_in_yard,
+           fill = Signs_in_yard)) + 
+  geom_bar(position = "dodge")
+
+bar_season <- ggplot(df, 
+       aes(x = Season, 
+           group = Signs_in_yard,
+           fill = Signs_in_yard)) + 
+  geom_bar(position = "dodge")
+
+grid.arrange(bar_year, bar_season, ncol=2)
+```
+```{r, fig.align='center', fig.height=2}
+bar_year <- ggplot(df, 
+       aes(x = Year, 
+           fill = Signs_in_yard)) + 
+  geom_bar(position = "fill") +
+  labs(y = "Proportion")
+
+
+bar_season <- ggplot(df, 
+       aes(x = Season, 
+           fill = Signs_in_yard)) + 
+  geom_bar(position = "fill") +
+  labs(y = "Proportion")
+
+grid.arrange(bar_year, bar_season, ncol=2)
 ```
 
-```{r}
-table(df$Season)
+
+From the bar plot of Signs_in_yard by Year we can observe that the presence of badger activity in the farmyard in 2004 is lower than those in 2003 and 2005. From the bar plot of Signs_in_yard by Season we see that presence of badger activity is the highest in season 1 and the lowest in season 3.
+
+#### No_active_setts_in_fields & No_cattle_in_buidlings_yard
+```{r, fig.height=2, fig.align='center', include=FALSE}
+hist_No_active_setts_in_fields <- ggplot(df, aes(x=No_active_setts_in_fields)) + 
+ geom_histogram(aes(y=..density..), colour="black", fill="white", bins = 20)+
+ geom_density(alpha=.2, fill="red") 
+
+hist_No_cattle_in_buidlings_yard <- ggplot(df, aes(x=No_cattle_in_buidlings_yard)) + 
+ geom_histogram(aes(y=..density..), colour="black", fill="white", bins = 20)+
+ geom_density(alpha=.2, fill="blue") 
+
+grid.arrange(hist_No_active_setts_in_fields,hist_No_cattle_in_buidlings_yard, ncol=2)
+
+# Both the distributions of No_active_setts_in_fields and No_cattle_in_buidlings_yard are extremely right skewed. 
+```
+
+```{r, fig.align='center', fig.height=2}
+box_No_active_setts_in_fields <- ggplot(data=df, 
+       mapping = aes(x = Signs_in_yard, 
+                     y = No_active_setts_in_fields, 
+                     fill = Signs_in_yard)) + 
+  geom_boxplot()
+
+box_No_cattle_in_buidlings_yard <- ggplot(data=df, 
+       mapping = aes(x = Signs_in_yard, 
+                     y = No_cattle_in_buidlings_yard, 
+                     fill = Signs_in_yard)) + 
+  geom_boxplot()
+
+grid.arrange(box_No_active_setts_in_fields, 
+             box_No_cattle_in_buidlings_yard, 
+             ncol=2)
+```
+The median of No_active_setts_in_fields is much higher when there is badger activity in the farmyard than when there is no badger activity. The median of No_cattle_in_buidlings_yard is also much higher when there is badger activity in the farmyard than when there is no badger activity. 
+
+#### Farm
+```{r, fig.align='center', fig.height=2.5}
+df$Accessible_feed_store_present = factor(df$Accessible_feed_store_present)
+
+bar_farm <- ggplot(df, 
+       aes(x = farm_code_numeric, 
+           fill = Signs_in_yard)) + 
+  geom_bar(position = "stack") + 
+  labs(title = "Signs in Yard by Farm")
+
+bar_Accessible_feed_store_present <- ggplot(df, 
+       aes(x = Accessible_feed_store_present, 
+           fill = Signs_in_yard)) + 
+  geom_bar(position = "fill") +
+  labs(y = "Proportion")
+
+grid.arrange(bar_farm, bar_Accessible_feed_store_present, 
+             ncol=2,
+             widths=c(3, 2))
+```
+The patterns in the stacked bar chart of Signs_in_yard by farm indicate the incorporation of the random intercept by farm into our model. From the segmented bar chart for Accessible_feed_store_present we know that there are more presences of badger activities in the farmyard when there is Accessible_feed_store_present than when there is not. 
+
+#### Binary Variables
+
+```{r, fig.align='center', fig.height=3}
+corrplot(cor(df[,c(13,14,15,16,19,20,21)]), 
+         method = "color", 
+         addCoef.col="grey", 
+         order = "AOE",
+         number.cex = 0.75,
+         tl.cex = 0.5)
 ```
 
 
-```{r}
-hist(df$No_active_setts_in_fields)
+```{r, include=FALSE}
+correlation::correlation(df[,c(10,13,14,15,16,19,20,21)])
 ```
 
-```{r}
-hist(df$No_cattle_in_buidlings_yard)
-```
 
-```{r}
+```{r, include=FALSE}
 table(df$Accessible_feed_store_present)
 ```
 
 
-
-
-```{r, fig.height=3, fig.align='center'}
-# log transform ppm
-df$log_ppm <- log(df$ppm)
-hist_ppm <- ggplot(df, aes(x=ppm)) + 
- geom_histogram(aes(y=..density..), colour="black", fill="white", bins = 50)+
- geom_density(alpha=.2, fill="red") 
-hist_log_ppm <- ggplot(df, aes(x=log_ppm)) + 
- geom_histogram(aes(y=..density..), colour="black", fill="white", bins = 50)+
- geom_density(alpha=.2, fill="blue") 
-grid.arrange(hist_ppm, hist_log_ppm, ncol=2)
-```
 
 
 ## Model
@@ -80,11 +162,84 @@ Predictors to consider include year, season, number of active badger homes in ne
 mdl1 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + Accessible_feed_store_present + (1|Season) + Grass_silage + Cereal_silage + HayStraw + Cereal_grains + Sugarbeet + Vegetables + Molasses, 
               family = binomial(link="logit"),
               data = df)
-summary(mdl1)
+#summary(mdl1)
 
+mdl2 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric), 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl3 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season, 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl4 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + HayStraw  , 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl5 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + Sugarbeet, 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl6 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + Molasses, 
+              family = binomial(link="logit"),
+              data = df)
+
+anova(mdl4,mdl5,mdl6)
+
+
+mdl7 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + Grass_silage, 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl8 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season + Cereal_silage, 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl9 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season + Cereal_grains, 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl10 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + Cereal_silage + Cereal_grains, 
+              family = binomial(link="logit"),
+              data = df)
+
+anova(mdl4, mdl7,mdl8,mdl9,mdl10)
+
+```
+
+```{r}
+mdl_final <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + HayStraw  , 
+              family = binomial(link="logit"),
+              data = df)
 ```
 
 
 #### Model Specification
 
 ## Result
+#### Fixed Effects
+```{r, message=FALSE, warning=FALSE}
+coefs <- data.frame(coef(summary(mdl_final)))
+# use normal distribution to approximate p-value
+coefs$Pr...z.. <- 2 * (1 - pnorm(abs(coefs$z.value)))
+knitr::kable(coefs, col.names = c("Estimate", "Std.Error", "t-value", "P-value"))
+```
+
+#### Random Effects
+```{r}
+re_dat = as.data.frame(VarCorr(mdl_final))
+re_names = rbind("Farm (Intercept)")
+re_results <- cbind(re_names, re_dat$vcov, re_dat$sdcor)
+knitr::kable(re_results, col.names = c("Group", "Variance", "Std.Dev."), digits = 4)
+```
+
+```{r, fig.align='center', fig.height=6}
+dotplot(ranef(mdl_final, condVar=TRUE))$farm_code_numeric
+```
+
+```{r, include=FALSE}
+library(sjstats)
+icc(mdl_final)
+#Adjusted ICC: 0.601
+#Conditional ICC: 0.484
+```
