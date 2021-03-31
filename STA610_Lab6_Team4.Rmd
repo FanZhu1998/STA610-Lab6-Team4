@@ -186,6 +186,25 @@ mdl6 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings
 
 anova(mdl4,mdl5,mdl6)
 
+
+mdl7 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + Grass_silage, 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl8 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season + Cereal_silage, 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl9 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season + Cereal_grains, 
+              family = binomial(link="logit"),
+              data = df)
+
+mdl10 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + Cereal_silage + Cereal_grains, 
+              family = binomial(link="logit"),
+              data = df)
+
+anova(mdl4, mdl7,mdl8,mdl9,mdl10)
+
 ```
 
 ```{r}
