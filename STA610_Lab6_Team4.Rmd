@@ -147,7 +147,7 @@ correlation::correlation(df[,c(10,13,14,15,16,19,20,21)])
 ```
 
 
-```{r}
+```{r, include=FALSE}
 table(df$Accessible_feed_store_present)
 ```
 
