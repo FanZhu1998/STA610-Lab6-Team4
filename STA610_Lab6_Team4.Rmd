@@ -71,8 +71,7 @@ bar_season <- ggplot(df,
 grid.arrange(bar_year, bar_season, ncol=2)
 ```
 
-
-From the bar plot of Signs_in_yard by Year we can observe that the presence of badger activity in the farmyard in 2004 is lower than those in 2003 and 2005. From the bar plot of Signs_in_yard by Season we see that presence of badger activity is the highest in season 1 and the lowest in season 3.
+From the bar plot of Signs_in_yard by Year we can observe that the presence of badger activity in the farmyard in 2004 is lower than those in 2003 and 2005. From the bar plot of Signs_in_yard by Season we see that presence of badger activity is the highest in season 1 and the lowest in season 3. Even though badgers do not hibernate, they reduce activities during cold weathers so we will use a main effect of season in our model.
 
 #### No_active_setts_in_fields & No_cattle_in_buidlings_yard
 ```{r, fig.height=2, fig.align='center', include=FALSE}
@@ -155,15 +154,7 @@ table(df$Accessible_feed_store_present)
 
 
 ## Model
-
-Predictors to consider include year, season, number of active badger homes in nearby fields (no_active_setts_in_fields), the number of cattle on the farm (no_cattle_in_buildings_yard), whether farm feed can be accessed by badgers (accessible_feed_store_present), and indicators of whether various types of crops were present on the farm (including grass silage, cereal silage, hay, cereal for grain, sugar beets, vegetables, and molasses).
-
 ```{r}
-mdl1 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + Accessible_feed_store_present + (1|Season) + Grass_silage + Cereal_silage + HayStraw + Cereal_grains + Sugarbeet + Vegetables + Molasses, 
-              family = binomial(link="logit"),
-              data = df)
-#summary(mdl1)
-
 mdl2 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric), 
               family = binomial(link="logit"),
               data = df)
@@ -184,7 +175,7 @@ mdl6 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings
               family = binomial(link="logit"),
               data = df)
 
-anova(mdl4,mdl5,mdl6)
+#anova(mdl4,mdl5,mdl6)
 
 
 mdl7 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + Grass_silage, 
@@ -203,18 +194,42 @@ mdl10 <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidling
               family = binomial(link="logit"),
               data = df)
 
-anova(mdl4, mdl7,mdl8,mdl9,mdl10)
-
+#anova(mdl4, mdl7,mdl8,mdl9,mdl10)
 ```
 
 ```{r}
-mdl_final <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + HayStraw  , 
+mdl_final <- glmer(Signs_in_yard ~ No_active_setts_in_fields + No_cattle_in_buidlings_yard + (1|farm_code_numeric) + Season  + HayStraw , 
               family = binomial(link="logit"),
               data = df)
 ```
 
+#### Model Selection
+From the correlation plot we can observe that there are some significant correlations between the binary variables. Therefore, we need to exclude some of them to prevent the collinearity issue. For instance, Cereal_silage and HayStraw cannot exist in the same model because of their significant correlation coefficient. We did not use random intercept for season because there are only four seasons. Interaction terms are removed because they would result in failures to converge and singularity issues. Based on these principles, we built multiple viable models by adding combinations of binary variables on a basic model $Signs in yard \sim No active setts in fields+No cattle in buidlings yard+(1|farm code numeric)+Season$.
+
+```{r}
+BIC_res <- sapply(c(mdl4, mdl5, mdl6, mdl7, mdl8, mdl9, mdl10), BIC)
+re_results <- data.frame('Model' = c('Model4', 
+                                     'Model5', 
+                                     'Model6', 
+                                     'Model7',
+                                     'Model8',
+                                     'Model9',
+                                     'Model10'),
+                         'Binary Variables Added to the Basic Model' = c('HayStraw',
+                                     'Sugarbeet',
+                                     'Molasses',
+                                     'Grass silage',
+                                     'Cereal silage',
+                                     'Cereal grains',
+                                     'Cereal silage+Cereal grains'), 
+                         'BIC' = BIC_res)
+knitr::kable(re_results, caption = 'Model Comparisons with BIC')
+```
+
+From the model comparisons above we chose model 4 as our final model following the principle of parsimony.
 
 #### Model Specification
+
 
 ## Result
 #### Fixed Effects
