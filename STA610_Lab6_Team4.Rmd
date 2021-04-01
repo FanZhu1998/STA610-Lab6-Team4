@@ -229,28 +229,52 @@ knitr::kable(re_results, caption = 'Model Comparisons with BIC')
 From the model comparisons above we chose model 4 as our final model following the principle of parsimony.
 
 #### Model Specification
+$$Signsinyard \mid x_{ij} \sim Bernoulli(\pi_{ij})$$
 
+* i stands for individual observations, i = 1,...,n. j stands for each farm, j = 1,...,36.
 
-## Result
+$$\log(\frac{\pi_{ij}}{1-\pi_{ij}}) = \beta_0 + b_{0j} + \beta_{1}* x_1 + \beta_{2}*x_2 + \beta_{3}*x_3 + \beta_{4}*x_4$$
+$$b_{0j} \sim N(0,\sigma^2)$$
+
+* $\beta_{0j}$ stands for random intercept by farm. 
+* $x_1$ stands for number of active badger homes in nearby fields (No_active_setts_in_fields).
+* $x_2$ stands for number of cattle on the farm (No_cattle_in_buildings_yard).
+* $x_3$ stands for Season.
+* $x_4$ stands for HayStraw.
+
+## Results
 #### Fixed Effects
 ```{r, message=FALSE, warning=FALSE}
 coefs <- data.frame(coef(summary(mdl_final)))
 # use normal distribution to approximate p-value
 coefs$Pr...z.. <- 2 * (1 - pnorm(abs(coefs$z.value)))
-knitr::kable(coefs, col.names = c("Estimate", "Std.Error", "t-value", "P-value"))
+coefs$`Low CI Endpt` <- coefs$Estimate - 1.96*coefs$Std..Error
+coefs$`High CI Endpt` <- coefs$Estimate + 1.96*coefs$Std..Error
+knitr::kable(coefs[, c(1, 2, 5, 6)], col.names = c("Estimate", "Std.Error", "CI - Low", "CI - High"), caption = "Factors Related to Badger Activity", digits=2)
 ```
+
+* *Intercept*: For a fixed farm (or across all farms), an observation, which has no number of active badger homes in nearby fields (no_active_setts_in_fields), no number of cattle on the farm (no_cattle_in_buildings_yard), Season being 1 and no HayStraw, has the odds of exp(-4.6049271) = 0.01 of badger activity being present in the farmyard.
+
+* *Number of active badger homes in nearby fields (No_active_setts_in_fields)*: Controlling for other variables, for every one unit increase of number of active badger homes in nearby fields, the odds of badger activity being present in the farmyard increase by a multiplicative effect of exp(0.4878348) = 1.628786.
+
+* *Number of cattle on the farm (No_cattle_in_buidlings_yard)*: Controlling for other variables, for every one unit increase of number of cattle on the farm, the odds of badger activity being present in the farmyard increase by a multiplicative effect of exp(0.0051664) = 1.00518.
+  
+* *Season* ("Season1" is the reference, other levels omitted for brevity):
+    + Controlling for other variables, an observation in Season2 has exp(-0.2294778) = 0.7949486 times the odds of badger activity being present in the farmyard as an observation in Season1.
+    
+* *HayStraw* ("HayStraw0" is the reference):
+    + Controlling for other variables, an observation with HayStraw1 has exp(-0.7805303) = 0.458163 times the odds of badger activity being present in the farmyard as an observation with HayStraw0.
+    
+* 95% confidence interval endpoints are also on the logit scale. For example, we can say that we are 95% confident that the odds estimate for HayStraw above is between exp(-1.9589250) = 0.14 and exp(0.3978645) = 1.49. 
 
 #### Random Effects
 ```{r}
 re_dat = as.data.frame(VarCorr(mdl_final))
 re_names = rbind("Farm (Intercept)")
 re_results <- cbind(re_names, re_dat$vcov, re_dat$sdcor)
-knitr::kable(re_results, col.names = c("Group", "Variance", "Std.Dev."), digits = 4)
+knitr::kable(re_results, col.names = c("Group", "Variance", "Std.Dev."), digits = 2, caption = "Farm Variation")
 ```
 
-```{r, fig.align='center', fig.height=6}
-dotplot(ranef(mdl_final, condVar=TRUE))$farm_code_numeric
-```
 
 ```{r, include=FALSE}
 library(sjstats)
@@ -258,3 +282,20 @@ icc(mdl_final)
 #Adjusted ICC: 0.601
 #Conditional ICC: 0.484
 ```
+
+The variance of the farm-level intercepts (i.e., the baseline log-odds of badger activity among the farms) is about 4.94, while the grand intercept is centered at about -4.60. In other words, the variance is about the same as the mean, which suggests a considerable amount of between-farm heterogeneity.
+
+The adjusted ICC is 0.601, which indicates high similarity between values from the same farm. I.E., each farm is fairly homogeneous with respect to its observations of badger activity. 
+
+```{r, fig.align='center', fig.height=6}
+dotplot(ranef(mdl_final, condVar=TRUE))$farm_code_numeric
+```
+
+The odds of the random intercepts range from exp(4.29665538) = 73.45371 for farm with code 3 to exp(-2.39464632) = 0.09120493 for farm with code 8. We interpret this as follows: the estimated odds of badger activity being present in the farmyard is highest for farm with code 3 with zero active badger homes in nearby fields (no_active_setts_in_fields), zero cattle on the farm (no_cattle_in_buildings_yard), Season being 1 and no HayStraw. One interesting observation from the above graph is that farms with below-average intercepts appear to be generally somewhat more homogeneous (similar in value) than those with above-average intercepts. 
+
+With regard to correlation over time, the correlations of fixed effects in the model summary suggest how the coefficients of 'Season' tend to correlate with each other. For example, Season 1's respective correlations with Seasons 2, 3, and 4 are -0.444, -0.463, and -0.232. So, higher badger activity in Season 1 is expected to be associated with lower badger activity in the other three seasons. 
+
+```{r include=FALSE}
+summary(mdl_final)
+```
+
